@@ -519,7 +519,18 @@ where
     {
         if let Some(current_caller) = _current_caller {
             use notify_rust::{Hint, Notification, Timeout};
-            let notification = Notification::new()
+            // Reuse the previous notification ID so that daemons like GNOME
+            // Shell replace the last notification instead of piling up a new
+            // entry in the notification list on every invocation
+            let id_path = std::env::var_os("XDG_RUNTIME_DIR")
+                .map(std::path::PathBuf::from)
+                .unwrap_or_else(std::env::temp_dir)
+                .join(concat!(env!("CARGO_BIN_NAME"), "-notification-id"));
+            let last_id = std::fs::read_to_string(&id_path)
+                .ok()
+                .and_then(|s| s.trim().parse::<u32>().ok());
+            let mut notification = Notification::new();
+            notification
                 .summary("Credential request")
                 .hint(Hint::Transient(true))
                 .body(&format!(
@@ -532,10 +543,19 @@ where
                     current_caller.pid,
                     url
                 ))
-                .timeout(Timeout::Milliseconds(6000))
-                .show();
-            if let Err(e) = notification {
-                warn!("Failed to show notification for credential request, {}", e);
+                .timeout(Timeout::Milliseconds(6000));
+            if let Some(last_id) = last_id {
+                notification.id(last_id);
+            }
+            match notification.show() {
+                Ok(handle) => {
+                    if let Err(e) = std::fs::write(&id_path, handle.id().to_string()) {
+                        warn!("Failed to save notification ID, {}", e);
+                    }
+                }
+                Err(e) => {
+                    warn!("Failed to show notification for credential request, {}", e);
+                }
             }
         }
     }
