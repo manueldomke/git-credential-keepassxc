@@ -809,9 +809,10 @@ impl YubiKeyTrait for YubiKey {
         info!("Sending HMAC challenge, tap your YubiKey if needed");
         #[cfg(feature = "notification")]
         {
-            use notify_rust::{Notification, Timeout};
+            use notify_rust::{Hint, Notification, Timeout};
             let notification = Notification::new()
                 .summary("Tap YubiKey if necessary")
+                .hint(Hint::Transient(true))
                 .body(&format!(
                     "{} is going to send HMAC challenge to YubiKey",
                     env!("CARGO_BIN_NAME")

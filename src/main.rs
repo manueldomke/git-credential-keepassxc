@@ -518,9 +518,10 @@ where
     #[cfg(feature = "notification")]
     {
         if let Some(current_caller) = _current_caller {
-            use notify_rust::{Notification, Timeout};
+            use notify_rust::{Hint, Notification, Timeout};
             let notification = Notification::new()
                 .summary("Credential request")
+                .hint(Hint::Transient(true))
                 .body(&format!(
                     "{} ({}) has requested credential for {}",
                     current_caller
